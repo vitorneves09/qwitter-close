@@ -1,6 +1,6 @@
 <template>
   <q-page class="relative-position">
-    <q-scroll-area class="absolute fullscreen">
+    <q-scroll-area class="absolute full-width full-height">
       <div class="q-py-lg q-px-md row items-end q-col-gutter-sm">
         <div class="col">
           <q-input
@@ -42,7 +42,7 @@
           <q-item
             class="q-py-md qweet"
             v-for="qweet in qweets"
-            :key="qweet.date"
+            :key="qweet.id"
           >
             <q-item-section avatar top>
               <q-avatar size="xl">
@@ -79,7 +79,14 @@
                   icon="fas fa-retweet"
                   size="sm"
                 />
-                <q-btn flat round color="grey" icon="fas fa-heart" size="sm" />
+                <q-btn 
+                  flat
+                  round 
+                  :color="qweet.liked?'pink':'grey'" 
+                  :icon="qweet.liked?'fas fa-heart':'far fa-heart'" 
+                  size="sm" 
+                  @click="toggleLiked(qweet)"
+                />
                 <q-btn
                   flat
                   round
@@ -131,54 +138,59 @@ export default {
   data() {
     return {
       newQweetContent: "",
-      qweets: [
-        // {
-        //   content:
-        //     "The button component also comes with a spinner or loading effect. You would use this for times when app execution may cause a delay and you want to give the user some feedback about that delay. When used, the button will display a spinning animation as soon as the user clicks the button.",
-        //   date: 1620272740807
-        // },
-        // {
-        //   content:
-        //     "The button component also comes with a spinner or loading effect. You would use this for times when app execution may cause a delay and you want to give the user some feedback about that delay. When used, the button will display a spinning animation as soon as the user clicks the button.",
-        //   date: 1620273647073
-        // },
-        // {
-        //   content:
-        //     "The button component also comes with a spinner or loading effect. You would use this for times when app execution may cause a delay and you want to give the user some feedback about that delay. When used, the button will display a spinning animation as soon as the user clicks the button.",
-        //   date: 1620273651679
-        // }
-      ]
+      qweets: []
     };
   },
   mounted() {
-    db.collection("qweets").onSnapshot(snapshot => {
+    db.collection("qweets").orderBy('date').onSnapshot(snapshot => {
         snapshot.docChanges().forEach(change => {
           let qweetChange = change.doc.data();
+          qweetChange.id = change.doc.id;
           if (change.type === "added") {
-            console.log("New qweet: ", change.doc.data());
             this.qweets.unshift(qweetChange);
           }
           if (change.type === "modified") {
-            console.log("Modified qweet: ", change.doc.data());
+            const index = this.qweets.findIndex(qweet => qweet.id == qweetChange.id);
+            Object.assign(this.qweets[index],qweetChange);
           }
           if (change.type === "removed") {
-            console.log("Removed qweet: ", change.doc.data());
+            const index = this.qweets.findIndex(qweet => qweet.id == qweetChange.id);
+            this.qweets.splice(index, 1);
           }
         });
       });
   },
   methods: {
     addNewQweet() {
-      this.qweets.unshift({
+      let newQweet = {
         content: this.newQweetContent,
-        date: Date.now()
+        date: Date.now(),
+        liked:false,
+      };
+
+      db.collection('qweets').add(newQweet).then(doRef=>{
+        console.log("Document written",doRef);
+      }).catch(error=>{
+        console.log("Document error",error);
+      })
+
+      this.newQweetContent =  '';
+    },
+
+
+    DeleteQweet(qweet) {
+      db.collection('qweets').doc(qweet.id).delete().then(doRef=>{
+        console.log("Document Delete",doRef);
+      }).catch(error=>{
+        console.log("Document error Delete",error);
       });
     },
-    DeleteQweet(qweet) {
-      let dateDelete = qweet.date;
-      const index = this.qweets.findIndex(qweet => qweet.date == dateDelete);
-      this.qweets.splice(index, 1);
-    },
+
+    toggleLiked(qweet){
+       db.collection('qweets').doc(qweet.id).update({
+         liked: !qweet.liked ,
+       });
+    }
   }
 };
 </script>

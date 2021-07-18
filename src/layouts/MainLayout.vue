@@ -101,7 +101,9 @@
     </q-drawer>
 
     <q-page-container>
-      <router-view />
+      <keep-alive>
+        <router-view />
+      </keep-alive>
     </q-page-container>
 
     <q-footer elevated class="bg-grey-8 text-white">
